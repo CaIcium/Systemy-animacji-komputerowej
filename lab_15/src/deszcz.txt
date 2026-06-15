@@ -1,0 +1,75 @@
+import bpy
+
+objects_to_remove = [obj for obj in bpy.data.objects if obj.name.startswith("Rain_Emitter") or obj.name.startswith("RainDrop_Object")]
+
+for obj in objects_to_remove:
+    bpy.data.objects.remove(obj, do_unlink=True)
+
+if "Water_Material" in bpy.data.materials:
+    old_mat = bpy.data.materials["Water_Material"]
+    bpy.data.materials.remove(old_mat, do_unlink=True)
+
+bpy.ops.mesh.primitive_plane_add(size=26, location=(119, 0, 111))
+emitter = bpy.context.object
+emitter.name = "Rain_Emitter"
+emitter.scale = (10.1121, 10.1121, 10.1121)
+
+bpy.ops.mesh.primitive_cylinder_add(vertices=8, radius=0.015, depth=0.4, location=(0, 0, 0))
+drop = bpy.context.object
+drop.name = "RainDrop_Object"
+
+mat = bpy.data.materials.new(name="Water_Material")
+mat.use_nodes = True
+nodes = mat.node_tree.nodes
+bsdf = nodes.get("Principled BSDF")
+
+if bsdf:
+    bsdf.inputs['Base Color'].default_value = (0.006, 0.344, 0.718, 1.0)
+    
+    bsdf.inputs['Roughness'].default_value = 0.02
+    bsdf.inputs['IOR'].default_value = 1.33
+    
+    if 'Transmission Weight' in bsdf.inputs:
+        bsdf.inputs['Transmission Weight'].default_value = 1.0
+    elif 'Transmission' in bsdf.inputs:
+        bsdf.inputs['Transmission'].default_value = 1.0
+
+drop.data.materials.append(mat)
+drop.location = (0, 0, -500)
+
+
+bpy.context.view_layer.objects.active = emitter
+bpy.ops.object.particle_system_add()
+ps = emitter.particle_systems[0]
+settings = ps.settings
+
+settings.name = "Rain_Settings"
+settings.type = 'EMITTER'
+
+settings.count = 50000
+
+settings.frame_start = -150    
+settings.frame_end = 250   
+settings.lifetime = 150        
+
+settings.emit_from = 'FACE'
+
+settings.physics_type = 'NEWTON'
+settings.normal_factor = 0.0 
+
+
+settings.object_align_factor[0] = 5.0 
+
+
+settings.object_align_factor[2] = -5.0
+
+settings.render_type = 'OBJECT'
+settings.instance_object = drop
+settings.particle_size = 4 
+settings.size_random = 0.4
+
+settings.use_rotations = True
+settings.rotation_mode = 'VEL'
+
+
+bpy.context.view_layer.update()
